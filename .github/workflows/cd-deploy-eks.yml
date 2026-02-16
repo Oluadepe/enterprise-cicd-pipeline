@@ -1,0 +1,105 @@
+name: CD - Deploy to EKS (Promotion)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      image_tag:
+        description: "Docker image tag to deploy (default: latest commit SHA)"
+        required: false
+  workflow_run:
+    workflows: ["CI - Build, Scan & Push to ECR"]
+    types: [completed]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    # For workflow_run, default to dev; for manual, use input
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Configure kubeconfig
+        env:
+          CLUSTER: ${{ secrets.EKS_CLUSTER_NAME }}
+          REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION"
+          kubectl get nodes
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy/Upgrade via Helm
+        env:
+          NAMESPACE: ${{ secrets.K8S_NAMESPACE }}
+          ECR_REPO: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          kubectl create namespace "$NAMESPACE" || true
+
+          # Progressive delivery toggle (set PROGRESSIVE_DELIVERY=true in environment secrets/vars if desired)
+          PD="${{ vars.PROGRESSIVE_DELIVERY || 'false' }}"
+
+          if [ "$PD" = "true" ]; then
+            echo "Deploying with Argo Rollouts (canary)"
+            helm upgrade --install demo-api ./helm/demo-api               -n "$NAMESPACE"               --set image.repository="$ECR_REPO"               --set image.tag="$IMAGE_TAG"               --set progressiveDelivery.enabled=true               --set ingress.enabled=false
+          else
+            echo "Deploying with standard Kubernetes Deployment"
+            helm upgrade --install demo-api ./helm/demo-api               -n "$NAMESPACE"               --set image.repository="$ECR_REPO"               --set image.tag="$IMAGE_TAG"
+          fi
+
+      - name: Verify rollout
+        env:
+          NAMESPACE: ${{ secrets.K8S_NAMESPACE }}
+        run: |
+          kubectl -n "$NAMESPACE" rollout status deploy/demo-api --timeout=180s || true
+          kubectl -n "$NAMESPACE" get deploy,svc
+
+      - name: Slack notification (optional)
+        if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ENV: ${{ github.event.inputs.environment || 'dev' }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          payload=$(cat <<EOF
+          { "text": "CD Deploy to *$ENV* completed for *demo-api* with image tag: *$IMAGE_TAG* (repo: ${{ github.repository }})" }
+          EOF
+          )
+          curl -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"

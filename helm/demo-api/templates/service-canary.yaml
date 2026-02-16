@@ -1,0 +1,13 @@
+{{- if .Values.progressiveDelivery.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-api-canary
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: demo-api
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+{{- end }}

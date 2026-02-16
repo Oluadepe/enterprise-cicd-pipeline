@@ -1,0 +1,9 @@
+aws_region       = "us-east-1"
+project          = "cicd-demo"
+ecr_repo_name    = "demo-api"
+
+github_org       = "YOUR_GITHUB_USERNAME_OR_ORG"
+github_repo      = "enterprise-cicd-pipeline"
+
+eks_cluster_name = "YOUR_EKS_CLUSTER_NAME"
+k8s_namespace    = "demo"
