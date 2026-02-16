@@ -1,246 +1,127 @@
-# Enterprise CI/CD Pipeline (GitHub Actions + Docker + Terraform + ECR + EKS)
+<!-- ELITE ANIMATED BANNER -->
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0ea5e9,100:6366f1&height=260&section=header&text=Enterprise%20CI/CD%20Pipeline&fontSize=48&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=GitHub%20Actions%20•%20Terraform%20•%20Docker%20•%20ECR%20•%20EKS%20•%20Helm&descAlignY=60&descAlign=50"/>
+</p>
 
-**Version:** v1.1.0 (Generated 2026-02-14)
-
-A production-style CI/CD repo that demonstrates how to:
-- provision an **ECR repo** and an **OIDC-based IAM role** for GitHub Actions (no long-lived AWS keys),
-- build and push a **Docker image** on every commit,
-- deploy to an existing **EKS** cluster using **Helm** (or kubectl), and
-- keep everything documented and repeatable.
-
----
-
-## Architecture
-
-![Architecture](docs/architecture.png)
-
-### Flow Summary
-1. Developer pushes code to GitHub.
-2. GitHub Actions assumes an AWS IAM role via **OIDC**.
-3. Pipeline builds a Docker image and pushes it to **Amazon ECR**.
-4. Pipeline updates the running app on **EKS** using Helm (`helm upgrade --install`).
-5. (Optional) Observability tools can watch deployment health (not required for this project).
+<!-- TYPING ANIMATION -->
+<p align="center">
+  <img src="https://readme-typing-svg.herokuapp.com/?font=Fira+Code&size=24&duration=3000&pause=800&color=0EA5E9&center=true&vCenter=true&width=900&lines=Enterprise+CI%2FCD+Pipeline+on+AWS;Secure+OIDC+Authentication+(No+Access+Keys);Fully+Automated+Docker+Build+and+Deploy;Production-Grade+Kubernetes+Deployments;Terraform+Infrastructure+as+Code;DevOps+Platform+Engineering+Portfolio"/>
+</p>
 
 ---
 
-## What’s in this repo
+<!-- BADGES -->
+<p align="center">
+  <img src="https://img.shields.io/badge/CI/CD-GitHub%20Actions-blue?style=for-the-badge&logo=githubactions"/>
+  <img src="https://img.shields.io/badge/IaC-Terraform-purple?style=for-the-badge&logo=terraform"/>
+  <img src="https://img.shields.io/badge/Cloud-AWS-orange?style=for-the-badge&logo=amazonaws"/>
+  <img src="https://img.shields.io/badge/Containers-Docker-blue?style=for-the-badge&logo=docker"/>
+  <img src="https://img.shields.io/badge/Kubernetes-EKS-blue?style=for-the-badge&logo=kubernetes"/>
+  <img src="https://img.shields.io/badge/Deployment-Helm-blue?style=for-the-badge&logo=helm"/>
+  <img src="https://img.shields.io/badge/Security-OIDC-green?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Security-Trivy-red?style=for-the-badge"/>
+</p>
 
-```text
-enterprise-cicd-pipeline/
-├── app/                          # sample app (Flask)
-│   ├── app.py
-│   └── requirements.txt
-├── Dockerfile
-├── helm/demo-api/                # Helm chart used by pipeline deployment
-│   ├── Chart.yaml
-│   ├── values.yaml
-│   └── templates/
-│       ├── deployment.yaml
-│       ├── service.yaml
-│       └── ingress.yaml
-├── terraform/                    # IaC: ECR + GitHub OIDC IAM role
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   └── versions.tf
-├── .github/workflows/
-│   ├── ci-build-push.yml         # build + push to ECR
-│   └── cd-deploy-eks.yml         # deploy to EKS with Helm
-└── docs/
-    └── architecture.png
+---
+
+# Enterprise CI/CD Pipeline
+
+Production-grade CI/CD pipeline implementing modern DevOps and platform engineering practices using GitHub Actions, Terraform, Docker, Amazon ECR, and Amazon EKS.
+
+---
+
+# DevOps Stack
+
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=aws,terraform,docker,kubernetes,githubactions,linux,bash,python,git,helm&perline=10"/>
+</p>
+
+---
+
+# Architecture Overview
+
+<p align="center">
+  <img src="docs/architecture.png" width="900"/>
+</p>
+
+---
+
+# Pipeline Flow
+
+```mermaid
+flowchart LR
+    Dev[Developer Push] --> GitHub[GitHub Repository]
+    GitHub --> CI[GitHub Actions CI]
+    CI --> Docker[Build Docker Image]
+    Docker --> ECR[Push to Amazon ECR]
+    ECR --> CD[GitHub Actions CD]
+    CD --> EKS[Deploy to Amazon EKS]
+    EKS --> Users[Application Live]
 ```
 
 ---
 
-## Prerequisites
+# Enterprise Features
 
-### Accounts & Access
-- An **AWS account** where you can create IAM roles and ECR repositories.
-- An existing **EKS cluster** (you can use Project 1’s EKS platform, or your own).
-- A GitHub repo where you’ll push this code.
-
-### Tools (local)
-- Terraform >= 1.6
-- AWS CLI v2
-- kubectl
-- Helm
-
----
-
-## Step 1 — Provision AWS resources (Terraform)
-
-This project provisions:
-- an **ECR repository** for your Docker images
-- an **IAM role** that GitHub Actions can assume using **OIDC**
-- IAM permissions: push to ECR + deploy to EKS (via `eks:DescribeCluster`)
-
-### 1.1 Configure Terraform variables
-Copy example and edit:
-
-```bash
-cd terraform
-cp terraform.tfvars.example terraform.tfvars
-```
-
-Edit `terraform/terraform.tfvars`:
-- `aws_region`
-- `ecr_repo_name`
-- `github_org`
-- `github_repo`
-- `eks_cluster_name`
-
-### 1.2 Apply Terraform
-```bash
-terraform init
-terraform apply -auto-approve
-```
-
-### 1.3 Capture outputs
-Terraform will output:
-- `ecr_repository_url`
-- `github_actions_role_arn`
-
-You will paste these into GitHub Secrets.
+- Secure OIDC authentication (no AWS keys)
+- Fully automated CI/CD pipeline
+- Infrastructure as Code (Terraform)
+- Docker containerization
+- Kubernetes deployment using Helm
+- Amazon ECR container registry
+- Amazon EKS orchestration
+- Security scanning with Trivy
+- Environment promotion support
+- Production-grade rollback capability
 
 ---
 
-## Step 2 — Configure GitHub Secrets
+# DevOps Capabilities Demonstrated
 
-In GitHub: **Settings → Secrets and variables → Actions**
-
-Add these secrets:
-
-- `AWS_REGION` = e.g. `us-east-1`
-- `AWS_ROLE_ARN` = Terraform output `github_actions_role_arn`
-- `ECR_REPOSITORY` = Terraform output `ecr_repository_url`
-- `EKS_CLUSTER_NAME` = your cluster name (same as terraform var)
-- `K8S_NAMESPACE` = `demo` (or your preferred namespace)
-
-> No AWS access keys required. The pipeline uses OIDC + role assumption.
-
----
-
-## Step 3 — Run CI (build + push)
-
-Workflow: `.github/workflows/ci-build-push.yml`
-
-**Trigger:** push to `main` (or manual dispatch)
-
-What it does:
-- builds Docker image
-- tags image with commit SHA
-- pushes image to ECR
+| Capability | Implementation |
+|----------|----------------|
+| CI/CD Automation | GitHub Actions |
+| Infrastructure Automation | Terraform |
+| Containerization | Docker |
+| Container Registry | Amazon ECR |
+| Kubernetes Deployment | Helm + EKS |
+| Authentication | OIDC |
+| Security Scanning | Trivy |
+| Deployment Strategy | Rolling / Canary Ready |
 
 ---
 
-## Step 4 — Run CD (deploy to EKS)
+# GitHub Stats (Elite Portfolio Feature)
 
-Workflow: `.github/workflows/cd-deploy-eks.yml`
-
-**Trigger:** after CI completes (and on manual dispatch)
-
-What it does:
-- updates kubeconfig for the cluster
-- deploys/updates release via Helm
-- sets the container image tag to the commit SHA
+<p align="center">
+  <img height="170" src="https://github-readme-stats.vercel.app/api?username=Oluadepe&show_icons=true&theme=tokyonight"/>
+  <img height="170" src="https://github-readme-streak-stats.herokuapp.com/?user=Oluadepe&theme=tokyonight"/>
+</p>
 
 ---
 
-## How to verify deployment
+# Author
 
-### Option A: Check Kubernetes resources
-```bash
-kubectl -n demo get deploy,svc,ingress
-kubectl -n demo describe deploy demo-api
-```
+<p align="center">
+  <img src="https://avatars.githubusercontent.com/u/YOUR_GITHUB_ID?v=4" width="120" style="border-radius:50%"/>
+</p>
 
-### Option B: Port-forward locally
-```bash
-kubectl -n demo port-forward svc/demo-api 8080:80
-curl http://localhost:8080/health
-```
+<p align="center">
+<strong>Olusegun Mayungbe</strong><br>
+DevOps Engineer | Platform Engineer | Kubernetes | Terraform | AWS
+</p>
 
-Expected:
-```json
-{"status":"ok"}
-```
-
----
-
-## Rollback strategy (simple, practical)
-If a deploy breaks, roll back Helm:
-
-```bash
-helm -n demo history demo-api
-helm -n demo rollback demo-api <REVISION>
-```
+<p align="center">
+  <a href="https://github.com/Oluadepe">
+    <img src="https://img.shields.io/badge/GitHub-Profile-black?style=for-the-badge&logo=github"/>
+  </a>
+  <a href="https://linkedin.com/in/molusegun">
+    <img src="https://img.shields.io/badge/LinkedIn-Profile-blue?style=for-the-badge&logo=linkedin"/>
+  </a>
+</p>
 
 ---
 
-## Notes for “FAANG-style” polish
-To make this portfolio stand out even more, add:
-- environment separation (dev/stage/prod)
-- security scanning (Trivy, Snyk) in CI
-- policy-as-code (OPA/Gatekeeper) in CD
-- deployment strategies (canary/blue-green)
-- SLOs + alerting
-
----
-
-## Security scanning (Trivy + SARIF)
-
-CI now runs **Trivy** to scan the built Docker image for **HIGH/CRITICAL** vulnerabilities and uploads results as **SARIF** to GitHub’s Security tab.
-
-Where to look:
-- `.github/workflows/ci-build-push.yml`
-
-You’ll see findings under:
-- GitHub → **Security** → **Code scanning alerts**
-
----
-
-## Environment promotion (dev → staging → prod)
-
-CD supports environment promotion using GitHub **Environments**.
-- `dev` deploys automatically after CI (workflow_run)
-- `staging` and `prod` are recommended to be **manual dispatch** with **required reviewers**.
-
-### Configure Environments in GitHub
-1. GitHub repo → **Settings → Environments**
-2. Create environments: `dev`, `staging`, `prod`
-3. For `staging` and `prod`, set:
-   - **Required reviewers** (approval gate)
-4. (Optional) Add environment variables:
-   - `PROGRESSIVE_DELIVERY=true` to enable Argo Rollouts canary mode
-
-Run deployment manually:
-- Actions → **CD - Deploy to EKS (Promotion)** → Run workflow
-- Choose environment and optional `image_tag`
-
----
-
-## Slack/Teams notifications (optional)
-
-Add secret:
-- `SLACK_WEBHOOK_URL`
-
-Then every CD run will post a notification.
-
----
-
-## Progressive delivery (optional) - Argo Rollouts canary
-
-This repo includes an optional canary deployment using Argo Rollouts.
-Docs:
-- `docs/argo-rollouts.md`
-
-Enable it by setting a GitHub environment variable:
-- `PROGRESSIVE_DELIVERY=true`
-
-
-## Cleanup
-Destroy Terraform resources:
-```bash
-cd terraform
-terraform destroy -auto-approve
-```
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:6366f1,100:0ea5e9&height=140&section=footer"/>
+</p>
